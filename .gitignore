@@ -37,6 +37,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 config.py
 .DS_Store
+config_test.py
 
 # Unit test / coverage reports
 htmlcov/
