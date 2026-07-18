@@ -1,0 +1,4 @@
+kubernetes
+requests
+websockets
+PyYAML
