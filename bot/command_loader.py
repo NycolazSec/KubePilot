@@ -11,7 +11,7 @@ def load_commands():
     for filename in os.listdir(commands_path):
         if filename.endswith(".py") and not filename.startswith("__"):
             module_name = filename[:-3]
-            module = importlib.import_module(f"commands.{module_name}")
+            module = importlib.import_module(f"bot.commands.{module_name}")
             
             if hasattr(module, "definition") and hasattr(module, "execute"):
                 registry[module.definition["name"]] = module
