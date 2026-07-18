@@ -34,7 +34,7 @@ KubePilot offers a suite of slash commands to interact with your cluster:
 
 2.  **Clone the Repository**:
     ```bash
-    git clone <your-repo-url>
+    git clone [<your-repo-url>](https://github.com/NycolazSec/KubePilot.git)
     cd k8s
     ```
 
