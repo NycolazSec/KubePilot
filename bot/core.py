@@ -2,7 +2,7 @@ import asyncio
 import json
 import websockets
 from config import BOT_TOKEN
-from interaction_handler import handle_interaction
+from bot.interaction_handler import handle_interaction
 
 async def heartbeat(ws, interval):
     while True:
