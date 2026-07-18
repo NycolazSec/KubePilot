@@ -240,7 +240,7 @@ def drain_node(node_name):
             try:
                 api.create_namespaced_pod_eviction(name=pod.metadata.name, namespace=pod.metadata.namespace, body=eviction_body)
                 eviction_results["success"].append(pod.metadata.name)
-            except ApiException as e:
+            except client.ApiException as e:
                 eviction_results["failed"].append(f"{pod.metadata.name} ({e.status})")
 
         summary = [f"Draining of node `{node_name}` initiated."]
@@ -249,5 +249,5 @@ def drain_node(node_name):
         if eviction_results["skipped"]: summary.append(f"ℹ️ {len(eviction_results['skipped'])} pod(s) (DaemonSet) ignored.")
         return "\n".join(summary)
 
-    except ApiException as e:
+    except client.ApiException as e:
         return f"❌ API error while draining node `{node_name}`: `{e.reason}`"
