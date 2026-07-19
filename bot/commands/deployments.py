@@ -142,9 +142,41 @@ def rollback_deployment(deployment_name, namespace="default"):
     try:
         utils._load_k8s_config()
         api = client.AppsV1Api()
-        return f"ℹ️ The rollback feature requires advanced ReplicaSet management logic not implemented in this simple version. The action has been noted."
+        
+        # 1. Get the deployment to find its UID and selector
+        deployment = api.read_namespaced_deployment(name=deployment_name, namespace=namespace)
+        if not deployment.spec.selector or not deployment.spec.selector.match_labels:
+            return f"❌ Cannot perform rollback: Deployment `{deployment_name}` has no selector."
+
+        # 2. List all ReplicaSets matching the deployment's selector
+        selector = deployment.spec.selector.match_labels
+        label_selector = ",".join([f"{k}={v}" for k, v in selector.items()])
+        all_replicasets = api.list_namespaced_replica_set(namespace=namespace, label_selector=label_selector)
+
+        # 3. Filter ReplicaSets owned by this deployment and sort by revision
+        deployment_replicasets = []
+        for rs in all_replicasets.items:
+            if any(owner.uid == deployment.metadata.uid for owner in (rs.metadata.owner_references or [])):
+                revision = rs.metadata.annotations.get("deployment.kubernetes.io/revision")
+                if revision and revision.isdigit():
+                    deployment_replicasets.append((int(revision), rs))
+        
+        deployment_replicasets.sort(key=lambda x: x[0], reverse=True)
+
+        # 4. Check if a previous revision exists
+        if len(deployment_replicasets) < 2:
+            return f"❌ No previous revision found for deployment `{deployment_name}` to roll back to."
+
+        # 5. Get the template from the previous ReplicaSet and patch the deployment
+        previous_rs = deployment_replicasets[1][1]
+        body = {"spec": {"template": client.ApiClient().sanitize_for_serialization(previous_rs.spec.template)}}
+        api.patch_namespaced_deployment(name=deployment_name, namespace=namespace, body=body)
+        
+        return f"✅ Rollback for deployment `{deployment_name}` to the previous revision has been initiated."
     except ApiException as e:
         return f"❌ Error during rollback of `{deployment_name}`: `{e.reason}`"
+    except Exception as e:
+        return f"❌ An unexpected error occurred during rollback of `{deployment_name}`: {str(e)}"
 
 def update_deployment_image(deployment_name, new_image, namespace="default"):
     try:
