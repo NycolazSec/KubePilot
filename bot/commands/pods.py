@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import yaml
 from . import utils
 import re
-from ..auth import AccessLevel
+from bot.auth import AccessLevel
 
 definition = {
     "name": "pods",
@@ -132,7 +132,7 @@ def show_pod_management(d):
     custom_id = d.get('data', {}).get('custom_id', '')
     namespace = custom_id.split(':')[1] if ':' in custom_id else 'default'
 
-    options = [{"label": name, "value": name, "description": f"Gérer le pod {name}"} for name in pod_names[:25]]
+    options = [{"label": name, "value": name, "description": f"Manage pod {name}"} for name in pod_names[:25]]
     return {
         "embeds": original_embeds,
         "components": [
