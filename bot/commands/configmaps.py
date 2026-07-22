@@ -1,6 +1,7 @@
 from kubernetes import client
 from datetime import datetime, timezone
 from . import utils
+from bot.auth import AccessLevel
 
 definition = {
     "name": "configmaps",
@@ -50,14 +51,14 @@ def execute(d):
     except Exception as e:
         return {"embeds": [{"title": "❌ Erreur K8s", "description": str(e), "color": 15158332}]}
 
-def get_configmap_details(configmap_name, namespace="default"):
+def get_configmap_details(configmap_name, namespace="default", access_level=AccessLevel.VIEWER):
     try:
         utils._load_k8s_config()
         api = client.CoreV1Api()
         cm = api.read_namespaced_config_map(name=configmap_name, namespace=namespace)
 
         embed = {
-            "title": f"Détails du ConfigMap: {cm.metadata.name}",
+            "title": f"ConfigMap Details: {cm.metadata.name}",
             "color": 3447003,
             "fields": [
                 {"name": "Namespace", "value": f"`{cm.metadata.namespace}`", "inline": True},
@@ -78,18 +79,27 @@ def get_configmap_details(configmap_name, namespace="default"):
         else:
             embed["fields"].append({"name": "Data", "value": "None", "inline": False})
 
-        components = [
-            {"type": 1, "components": [
+        action_buttons = []
+        if access_level >= AccessLevel.ADMIN:
+            action_buttons.extend([
                 {"type": 2, "style": 2, "label": "Edit", "custom_id": f"cm_edit:{configmap_name}:{namespace}", "emoji": {"name": "✏️"}},
                 {"type": 2, "style": 4, "label": "Delete", "custom_id": f"cm_delete:{configmap_name}:{namespace}", "emoji": {"name": "🗑️"}},
+            ])
+
+        components = []
+        if action_buttons:
+            components.append({"type": 1, "components": action_buttons})
+        
+        components.append(
+            {"type": 1, "components": [
                  {"type": 2, "style": 2, "label": "Back to list", "custom_id": f"cm_list_refresh:{namespace}"}
             ]}
-        ]
+        )
         return (7, {"embeds": [embed], "components": components})
     except client.ApiException as e:
         return (4, {"content": f"❌ Kubernetes API Error: `{e.reason}`", "flags": 64})
 
-def patch_configmap_data(configmap_name, key, value, namespace="default"):
+def patch_configmap_data(configmap_name, key, value, namespace="default", access_level=AccessLevel.ADMIN):
     try:
         utils._load_k8s_config()
         api = client.CoreV1Api()
@@ -97,7 +107,7 @@ def patch_configmap_data(configmap_name, key, value, namespace="default"):
         body = {"data": {key: value}}
         api.patch_namespaced_config_map(name=configmap_name, namespace=namespace, body=body)
 
-        return get_configmap_details(configmap_name, namespace)
+        return get_configmap_details(configmap_name, namespace, access_level)
     except client.ApiException as e:
         return (4, {"content": f"❌ Error while updating `{configmap_name}`: `{e.reason}`", "flags": 64})
 
