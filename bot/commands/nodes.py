@@ -2,6 +2,7 @@ from kubernetes import client
 from datetime import datetime, timezone
 from . import utils
 import re
+from bot.auth import AccessLevel
 
 definition = {
     "name": "nodes",
@@ -136,7 +137,7 @@ def show_node_management(d):
     }
     return (7, response_data)
 
-def get_node_details(node_name):
+def get_node_details(node_name, access_level=AccessLevel.VIEWER):
     try:
         utils._load_k8s_config()
         api = client.CoreV1Api()
@@ -172,37 +173,45 @@ def get_node_details(node_name):
             "color": 3447003,
             "fields": [
                 {"name": "Schedulable", "value": schedulable_status, "inline": True},
-                {"name": "Informations Système", "value": info_value, "inline": False},
+                {"name": "System Information", "value": info_value, "inline": False},
                 {"name": "Taints", "value": taints_str, "inline": False},
                 {"name": "Conditions", "value": conditions_str, "inline": False},
             ],
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
-        if node.spec.unschedulable:
-            toggle_button = {
-                "type": 2, "style": 3, "label": "Uncordon", 
-                "custom_id": f"nodes_uncordon:{node_name}", "emoji": {"name": "✅"}
-            }
-        else:
-            toggle_button = {
-                "type": 2, "style": 4, "label": "Cordon", 
-                "custom_id": f"nodes_cordon:{node_name}", "emoji": {"name": "🚧"}
-            }
+        action_buttons = []
+        if access_level >= AccessLevel.ADMIN:
+            if node.spec.unschedulable:
+                toggle_button = {
+                    "type": 2, "style": 3, "label": "Uncordon", 
+                    "custom_id": f"nodes_uncordon:{node_name}", "emoji": {"name": "✅"}
+                }
+            else:
+                toggle_button = {
+                    "type": 2, "style": 4, "label": "Cordon", 
+                    "custom_id": f"nodes_cordon:{node_name}", "emoji": {"name": "🚧"}
+                }
+            action_buttons.append(toggle_button)
+            action_buttons.append(
+                {"type": 2, "style": 4, "label": "Drain", "custom_id": f"nodes_drain:{node_name}", "emoji": {"name": "💧"}}
+            )
 
-        components = [
+        components = []
+        if action_buttons:
+            components.append({"type": 1, "components": action_buttons})
+        
+        components.append(
             {"type": 1, "components": [
-                 toggle_button,
-                 {"type": 2, "style": 4, "label": "Drain", "custom_id": f"nodes_drain:{node_name}", "emoji": {"name": "💧"}},
                  {"type": 2, "style": 2, "label": "Back to list", "custom_id": "nodes_list_refresh"}
             ]}
-        ]
+        )
         return (7, {"embeds": [embed], "components": components})
 
     except client.ApiException as e:
         return (7, {"content": f"❌ Kubernetes API Error: `{e.reason}`"})
 
-def toggle_node_scheduling(node_name, schedulable):
+def toggle_node_scheduling(node_name, schedulable, access_level=AccessLevel.ADMIN):
     try:
         utils._load_k8s_config()
         api = client.CoreV1Api()
@@ -210,7 +219,7 @@ def toggle_node_scheduling(node_name, schedulable):
         body = {"spec": {"unschedulable": not schedulable}}
         api.patch_node(name=node_name, body=body)
         
-        return get_node_details(node_name)
+        return get_node_details(node_name, access_level)
         
     except client.ApiException as e:
         action = "uncordon" if schedulable else "cordon"
