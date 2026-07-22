@@ -438,7 +438,7 @@ async def handle_interaction(event, command_registry):
             elif action == 'cm_confirm_edit':
                 key = data['components'][0]['components'][0]['value']
                 value = data['components'][1]['components'][0]['value']
-                response_type, response_data = await loop.run_in_executor(None, module.patch_configmap_data, name, key, value, namespace)
+                response_type, response_data = await loop.run_in_executor(None, module.patch_configmap_data, name, key, value, namespace, access_level)
                 discord_api.send_response(int_id, int_token, response_data, response_type)
                 if response_type == 7: # Success
                     await loop.run_in_executor(None, discord_api.send_audit_log, user_obj, "PATCH CONFIGMAP", f"configmap/{name}", f"Namespace: `{namespace}`\nKey: `{key}`")
@@ -465,14 +465,14 @@ async def handle_interaction(event, command_registry):
             elif action == 'secret_confirm_edit':
                 key = data['components'][0]['components'][0]['value']
                 value = data['components'][1]['components'][0]['value']
-                response_type, response_data = await loop.run_in_executor(None, module.patch_secret_data, name, key, value, namespace)
+                response_type, response_data = await loop.run_in_executor(None, module.patch_secret_data, name, key, value, namespace, access_level)
                 discord_api.send_response(int_id, int_token, response_data, response_type)
                 if response_type == 7: # Success
                     await loop.run_in_executor(None, discord_api.send_audit_log, user_obj, "PATCH SECRET", f"secret/{name}", f"Namespace: `{namespace}`\nKey: `{key}`")
             
             elif action == 'secret_confirm_delete_key':
                 key_to_delete = data['components'][0]['components'][0]['value']
-                response_type, response_data = await loop.run_in_executor(None, module.delete_secret_key, name, key_to_delete, namespace)
+                response_type, response_data = await loop.run_in_executor(None, module.delete_secret_key, name, key_to_delete, namespace, access_level)
                 discord_api.send_response(int_id, int_token, response_data, response_type)
                 if response_type == 7: # Success
                     await loop.run_in_executor(None, discord_api.send_audit_log, user_obj, "PATCH SECRET (REMOVE KEY)", f"secret/{name}", f"Namespace: `{namespace}`\nKey: `{key_to_delete}`")
